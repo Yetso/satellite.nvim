@@ -16,6 +16,21 @@ local function get_bar_windows()
   end)
 end
 
+local function highlighted_rows()
+  return exec_lua(function(winid)
+    local bufnr = vim.api.nvim_win_get_buf(winid)
+    local ns = vim.api.nvim_get_namespaces().satellite
+    local rows = {}
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, { details = true })) do
+      local chunks = assert(mark[4]).virt_text
+      if chunks and chunks[1] and chunks[1][2] == 'SatelliteBar' then
+        rows[#rows + 1] = mark[2]
+      end
+    end
+    return rows
+  end, get_bar_windows()[1])
+end
+
 local function get_state()
   return {
     bars = #get_bar_windows(),
@@ -139,21 +154,6 @@ describe('scrollbars', function()
   end)
 
   it('moves the scrollbar highlight when scrolling down and back up', function()
-    local function highlighted_rows()
-      return exec_lua(function(winid)
-        local bufnr = vim.api.nvim_win_get_buf(winid)
-        local ns = vim.api.nvim_get_namespaces().satellite
-        local rows = {}
-        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, { details = true })) do
-          local chunks = assert(mark[4]).virt_text
-          if chunks and chunks[1] and chunks[1][2] == 'SatelliteBar' then
-            rows[#rows + 1] = mark[2]
-          end
-        end
-        return rows
-      end, get_bar_windows()[1])
-    end
-
     exec_lua(function()
       require('satellite').setup()
     end)
@@ -170,6 +170,33 @@ describe('scrollbars', function()
     eq(top, highlighted_rows())
     eq({ bars = 1, notifications = {} }, get_state())
   end)
+
+  for _, case in ipairs({
+    { lines = 20, height = 5 }, -- bar used to end a row before the bottom
+    { lines = 18, height = 10 }, -- bar used to end a row past the bottom
+  }) do
+    local name = 'keeps the scrollbar at the bottom when the last line is visible'
+      .. (' (%d lines in %d rows)'):format(case.lines, case.height)
+    it(name, function()
+      exec_lua(function(c)
+        local lines = {}
+        for i = 1, c.lines do
+          lines[i] = 'Line ' .. i
+        end
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+        vim.cmd.resize(c.height)
+        require('satellite').setup()
+      end, case)
+      eq({ bars = 1, notifications = {} }, get_state())
+      local top = highlighted_rows()
+
+      n.feed('G')
+      local bottom = highlighted_rows()
+      -- same number of visible lines, so the bar must not be cut off at the bottom
+      eq(#top, #bottom)
+      eq(case.height - 1, bottom[#bottom])
+    end)
+  end
 
   it('keeps the scrollbar in the current split with current_only', function()
     exec_lua(function()

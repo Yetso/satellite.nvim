@@ -144,6 +144,13 @@ local function get_or_create_view(winid)
   local toprow = util.row_to_barpos(winid, topline - 1)
   local height = util.height_to_virtual(winid, topline - 1, botline - 1)
 
+  -- `toprow` and `height` are rounded separately, so the bar can end a row
+  -- before or after the bottom of the window. Pin it when the last line is
+  -- visible.
+  if botline == api.nvim_buf_line_count(api.nvim_win_get_buf(winid)) then
+    toprow = math.max(0, util.get_winheight(winid) - height)
+  end
+
   vim.w[bar_winid].col = cfg.col
   vim.w[bar_winid].width = cfg.width
   vim.w[bar_winid].height = height

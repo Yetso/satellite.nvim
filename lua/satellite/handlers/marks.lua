@@ -19,7 +19,7 @@ end
 local BUILTIN_MARKS = { "'.", "'^", "''", '\'"', "'<", "'>", "'[", "']" }
 
 --- @class Satellite.Handlers.MarksConfig: Satellite.Handlers.BaseConfig
---- @field key    string
+--- @field key    string|false
 --- @field show_builtins boolean
 local config = {
   key = 'm',

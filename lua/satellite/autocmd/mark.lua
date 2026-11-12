@@ -24,14 +24,17 @@ local function mark_set_keymap(key, m)
   end
 end
 
---- @param key string
+--- @param key string|false
 return function(key)
-  for code = string.byte('A'), string.byte('Z') do
-    mark_set_keymap(key, string.char(code))
-  end
+  -- false disables the mark keymaps; '' would map every bare letter.
+  if key and key ~= '' then
+    for code = string.byte('A'), string.byte('Z') do
+      mark_set_keymap(key, string.char(code))
+    end
 
-  for code = string.byte('a'), string.byte('z') do
-    mark_set_keymap(key, string.char(code))
+    for code = string.byte('a'), string.byte('z') do
+      mark_set_keymap(key, string.char(code))
+    end
   end
 
   local group = api.nvim_create_augroup('satellite_autocmd_mark', {})
